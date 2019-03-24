@@ -20,41 +20,37 @@ int main(int argc, char** argv)
     
     //setup code
     const int canvas_size = 1000000;
-    const float pi = 3.14;
-    const float epsilon = 0.01;
+    const float pi = 3.141592;
+    const float epsilon = 0.000001;
     int N = 0, M = 0;
     srand(rank+1);
 
+    //run for n loops or until converging
     int index;
-    for(index = 0; index < 10000; index++){
-        printf("loop %d\n", index);
+    for(index = 0; index < 10000; index++) {
+
         if (rank == 0) {
-            int coordinates[2];
+            printf("loop number %d\n", index + 1);
+
+            int values[2];
+            
             int i;
             for (i = 1; i < n_cpus; i++) {
                 //receive message
-                MPI_Recv(coordinates, 2, MPI_INT, i, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                printf("[%d]-> x:%d, y:%d\n", rank, coordinates[0], coordinates[1]);
-                //check if in bounds
-                if (in_bounds(coordinates, canvas_size)) {
-                    //if yes, add to M
-                    printf("[%d]-> ***was in bounds***\n", rank);
-                    M++;
-                }
-                else
-                {
-                    printf("[%d]-> not in bounds\n", rank);
-                }                
-                //add to N
-                N++;
+                MPI_Recv(values, 2, MPI_INT, i, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                //add to m and n total
+                M += values[0];
+                N += values[1];
+
                 //check convergence
-                printf("M:%.2f, N: %.2f", (float)M, (float)N);
-                float convergence = 4 * ((float)M / (float)N);
-                printf("[%d]-> convergence: %.2f\n", rank, convergence);
+                printf("M:%.1f, N: %.1f", (float)M, (float)N);
+                float convergence = 4.0 * ((float)M / (float)N);
+                printf("[%d]-> convergence: %.6f\n", rank, convergence);
 
                 //compare to epsilon
                 bool has_converged = (float)fabs((pi - convergence)) < epsilon;
-                printf("[%d]-> has_convergedf float: %.2f\n", rank, (float)fabs((pi - convergence)));
+                printf("[%d]-> has_converged float: %.6f\n", rank, (float)fabs((pi - convergence)));
                 printf("[%d]-> has_converged: %d\n", rank, has_converged);
 
                 //if criteria met, abort all, break loop
@@ -73,9 +69,14 @@ int main(int argc, char** argv)
             int y = generate_random_number(canvas_size);
             int coordinates[2] = {x, y};
 
+            //if yes, add to M
+            if (in_bounds(coordinates, canvas_size)) M++;
+            //add to N
+            N++;
+
             //send data
-            printf("[%d]-> x:%d, y:%d\n", rank, x, y);
-            MPI_Send(coordinates, 2, MPI_INT, 0, rank, MPI_COMM_WORLD);
+            int values[2] = {M, N};
+            MPI_Send(values, 2, MPI_INT, 0, rank, MPI_COMM_WORLD);
         }
     }
 
@@ -88,12 +89,7 @@ bool in_bounds(int* coordinates, int canvas_size) {
     long x_center = canvas_size/2;
     long y_center = x_center;
     int64_t radius_squared = ((int64_t)canvas_size / 2) * ((int64_t)canvas_size / 2);
+    int64_t distance_squared = ((coordinates[0] - x_center) * (coordinates[0] - x_center)) + ((coordinates[1] - y_center) * (coordinates[1] - y_center));
 
-    int64_t distance = ((coordinates[0] - x_center) * (coordinates[0] - x_center)) + ((coordinates[1] - y_center) * (coordinates[1] - y_center));
-    printf("inbounds -> canvassize: %d\n", canvas_size);
-
-    printf("inbounds -> distance: %lu\n", distance);
-    printf("inbounds -> radius_squared: %lu\n", radius_squared);
-    printf("inbounds -> result: %d\n", distance<radius_squared);
-    return distance < radius_squared;
+    return distance_squared < radius_squared;
 }
