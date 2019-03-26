@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 
 int generate_random_number(int);
 bool in_bounds(int*, int);
@@ -88,8 +89,8 @@ int generate_random_number(int canvas_size){return rand()%canvas_size;}
 bool in_bounds(int* coordinates, int canvas_size) {
     long x_center = canvas_size/2;
     long y_center = x_center;
-    int64_t radius_squared = ((int64_t)canvas_size / 2) * ((int64_t)canvas_size / 2);
-    int64_t distance_squared = ((coordinates[0] - x_center) * (coordinates[0] - x_center)) + ((coordinates[1] - y_center) * (coordinates[1] - y_center));
+    int64_t radius_squared = pow((canvas_size / 2.0), 2);
+    int64_t distance_squared = (pow((coordinates[0] - x_center), 2)) + (pow((coordinates[1] - y_center), 2));
 
     return distance_squared < radius_squared;
 }
