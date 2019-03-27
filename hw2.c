@@ -6,8 +6,8 @@
 #include <math.h>
 #include <time.h>
 
-int generate_random_number(const int*);
-bool in_bounds(const int*, const int*);
+int generate_random_number(int);
+bool in_bounds(const int*, int);
 
 int main(int argc, char** argv)
 {
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     const float pi = 3.141592;
     const float epsilon = 0.000001;
     int N = 0, M = 0;
-    srand((rank + 1) * time(NULL));
+    srand(rank + 1);
 
     //run for n loops or until converging
     int index;
@@ -58,6 +58,7 @@ int main(int argc, char** argv)
                 if (has_converged) {
                     printf("terminating\n");
                     // Finalize the MPI environment.
+                    MPI_Abort(MPI_COMM_WORLD, 0);
                     MPI_Finalize();
                     return 0;
                 }
@@ -66,12 +67,12 @@ int main(int argc, char** argv)
         else {
             //all other cores
             //pick random number x, y
-            int x = generate_random_number(&canvas_size);
-            int y = generate_random_number(&canvas_size);
+            int x = generate_random_number(canvas_size);
+            int y = generate_random_number(canvas_size);
             int coordinates[2] = {x, y};
 
             //if yes, add to M
-            if (in_bounds(coordinates, &canvas_size)) M++;
+            if (in_bounds(coordinates, canvas_size)) M++;
             //add to N
             N++;
 
@@ -81,12 +82,13 @@ int main(int argc, char** argv)
         }
     }
 
+    if(rank==1) printf("Loop finished without convergence.");
     MPI_Finalize();
 }
 
-int generate_random_number(const int *canvas_size){return rand()%canvas_size;}
+int generate_random_number(int canvas_size){return rand()%canvas_size;}
 
-bool in_bounds(const int* coordinates, const int* canvas_size) {
+bool in_bounds(const int* coordinates, int canvas_size) {
     long x_center = canvas_size/2;
     long y_center = x_center;
     int64_t radius_squared = pow((canvas_size / 2.0), 2);
