@@ -21,22 +21,21 @@ int main(int argc, char** argv)
     
     //setup code
     const int canvas_size = 1000000;
-    const float pi = 3.141592;
-    const float epsilon = 0.000001;
+    const float epsilon = 0.00001;
     int N = 0, M = 0;
+    float previous_value = 0;
     srand(rank + 1);
 
-    //run for n loops or until converging
+    //run near infinite time until convergence
     int index;
-    for(index = 0; index < 10000; index++) {
-
+    for(index=0;index<100000;index++) {
         if (rank == 0) {
-            printf("loop number %d\n", index + 1);
-
             int values[2];
-            
+
             int i;
             for (i = 1; i < n_cpus; i++) {
+                index++;
+                printf("loop number %d\n", index);            
                 //receive message
                 MPI_Recv(values, 2, MPI_INT, i, i, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
@@ -50,17 +49,20 @@ int main(int argc, char** argv)
                 printf("[%d]-> convergence: %.6f\n", rank, convergence);
 
                 //compare to epsilon
-                bool has_converged = (float)fabs((pi - convergence)) < epsilon;
-                printf("[%d]-> has_converged float: %.6f\n", rank, (float)fabs((pi - convergence)));
+                bool has_converged = (float)fabs((previous_value - convergence)) < epsilon;
+                printf("[%d]-> has_converged float: %.6f\n", rank, (float)fabs((previous_value - convergence)));
                 printf("[%d]-> has_converged: %d\n", rank, has_converged);
 
                 //if criteria met, abort all, break loop
-                if (has_converged) {
+                if (has_converged && index > 100) {
                     printf("terminating\n");
                     // Finalize the MPI environment.
-                    MPI_Abort(MPI_COMM_WORLD, 0);
                     MPI_Finalize();
                     return 0;
+                }
+                else {
+                    previous_value = convergence;
+                    printf("previous: %f\n", previous_value);
                 }
             }
         }
@@ -82,7 +84,6 @@ int main(int argc, char** argv)
         }
     }
 
-    if(rank==1) printf("Loop finished without convergence.");
     MPI_Finalize();
 }
 
